@@ -1,5 +1,4 @@
-import os
-import requests
+import os, json, csv, base64, requests
 from datetime import datetime
 from bs4 import BeautifulSoup
 from openai import OpenAI
@@ -8,47 +7,56 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 
-
-# =========================
-# CONFIGURACIÓN
-# =========================
-
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-twilio_client = Client(
-    os.environ["TWILIO_ACCOUNT_SID"],
-    os.environ["TWILIO_AUTH_TOKEN"]
-)
+twilio = Client(os.environ["TWILIO_ACCOUNT_SID"], os.environ["TWILIO_AUTH_TOKEN"])
 
 TWILIO_FROM = os.environ["TWILIO_FROM"]
 TWILIO_TO = os.environ["TWILIO_TO"]
+GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
+REPO = os.environ["GITHUB_REPOSITORY"]
+BRANCH = "main"
 
 hoy = datetime.now().strftime("%d/%m/%Y")
+fecha_archivo = datetime.now().strftime("%Y-%m-%d")
 
-
-# =========================
-# 1. OBTENER NOTICIAS
-# =========================
 
 def obtener_noticias():
-    url = "https://news.google.com/rss/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "xml")
+    urls = [
+        "https://news.google.com/rss/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419",
+        "https://news.google.com/rss/search?q=economia%20argentina%20gobierno&hl=es-419&gl=AR&ceid=AR:es-419",
+        "https://news.google.com/rss/search?q=congreso%20argentina%20milei&hl=es-419&gl=AR&ceid=AR:es-419",
+    ]
+
+    palabras_clave = [
+        "milei", "gobierno", "congreso", "senado", "diputados", "oposición",
+        "elecciones", "inflación", "dólar", "paro", "protesta", "justicia",
+        "reforma", "ley", "sindicatos", "provincia", "kicillof", "ucr"
+    ]
 
     noticias = []
+    vistos = set()
 
-    for item in soup.find_all("item")[:12]:
-        noticias.append({
-            "titulo": item.title.text,
-            "link": item.link.text
-        })
+    for url in urls:
+        r = requests.get(url, timeout=20)
+        soup = BeautifulSoup(r.content, "xml")
 
-    return noticias
+        for item in soup.find_all("item"):
+            titulo = item.title.text.strip()
+            link = item.link.text.strip()
+            titulo_lower = titulo.lower()
 
+            if titulo in vistos:
+                continue
 
-# =========================
-# 2. ANALIZAR AGENDA
-# =========================
+            if any(p in titulo_lower for p in palabras_clave):
+                noticias.append({"titulo": titulo, "link": link})
+                vistos.add(titulo)
+
+            if len(noticias) >= 18:
+                break
+
+    return noticias[:18]
+
 
 def analizar_agenda(noticias):
     texto_noticias = "\n".join(
@@ -56,72 +64,73 @@ def analizar_agenda(noticias):
     )
 
     prompt = f"""
-Sos director de inteligencia política de Polidoxa, una consultora especializada en escucha digital, opinión pública y análisis estratégico.
+Sos director de inteligencia política de Polidoxa, una consultora internacional de escucha digital, opinión pública y análisis estratégico.
 
-Trabajás con estándares de consultoría internacional: claridad ejecutiva, análisis de riesgo, lectura narrativa, impacto político y recomendaciones accionables.
+IMPORTANTE:
+- No inventes información.
+- Usá únicamente las noticias listadas.
+- Si un tema aparece una sola vez, tratálo como señal débil.
+- Priorizá temas repetidos, actores centrales, riesgo político y oportunidades de comunicación.
+- Incluí links reales de las noticias usadas.
 
-Analizá la agenda pública y política argentina a partir de estas noticias reales:
-
+Noticias relevadas:
 {texto_noticias}
 
-Elaborá un informe profesional en formato ejecutivo para WhatsApp, con lenguaje claro, estratégico y no partidario.
+Devolvé SOLO un JSON válido, sin texto adicional, con esta estructura:
 
-Formato obligatorio:
-
-📊 POLIDOXA | INTELLIGENCE BRIEF ARGENTINA
-📅 Fecha: {hoy}
-
-1. RESUMEN EJECUTIVO
-Sintetizá en 3 líneas qué está pasando y por qué importa.
-
-2. TEMA DOMINANTE
-Identificá el tema que ordena la agenda del día.
-Incluí:
-- descripción breve
-- actores involucrados
-- nivel de riesgo: bajo / medio / alto / crítico
-
-3. EJES SECUNDARIOS
-Listá hasta 3 temas relevantes.
-Para cada uno:
-- tema
-- impacto político
-- riesgo
-
-4. MATRIZ DE RIESGO
-Asigná puntajes de 0 a 100:
-- riesgo político
-- viralidad
-- daño reputacional
-- oportunidad comunicacional
-
-5. BATALLA NARRATIVA
-Separá:
-- narrativa oficialista
-- narrativa opositora
-- narrativa social emergente
-
-6. ACTORES CLAVE
-Identificá quién gana, quién pierde y quién queda expuesto.
-
-7. ALERTAS DE CRISIS
-Indicá si hay:
-- alerta roja
-- alerta amarilla
-- alerta verde
-Explicá brevemente por qué.
-
-8. OPORTUNIDADES DE COMUNICACIÓN
-Recomendá 3 acciones concretas para:
-- oficialismo
-- oposición moderada
-- actores territoriales
-
-9. RECOMENDACIÓN POLIDOXA
-Una recomendación estratégica breve, accionable y profesional.
-
-10. FUENTES
-Incluí los links principales usados.
+{{
+  "titulo": "POLIDOXA | INTELLIGENCE BRIEF ARGENTINA",
+  "fecha": "{hoy}",
+  "resumen_ejecutivo": "máximo 4 líneas",
+  "tema_dominante": {{
+    "tema": "",
+    "descripcion": "",
+    "actores": [],
+    "riesgo": "bajo/medio/alto/crítico"
+  }},
+  "ejes_secundarios": [
+    {{
+      "tema": "",
+      "impacto": "",
+      "riesgo": "bajo/medio/alto/crítico"
+    }}
+  ],
+  "matriz_riesgo": {{
+    "riesgo_politico": 0,
+    "viralidad": 0,
+    "danio_reputacional": 0,
+    "oportunidad_comunicacional": 0
+  }},
+  "narrativas": {{
+    "oficialismo": "",
+    "oposicion": "",
+    "social_emergente": ""
+  }},
+  "actores_clave": {{
+    "ganan": [],
+    "pierden": [],
+    "expuestos": []
+  }},
+  "alertas": [
+    {{
+      "nivel": "roja/amarilla/verde",
+      "tema": "",
+      "motivo": ""
+    }}
+  ],
+  "oportunidades": {{
+    "oficialismo": "",
+    "oposicion_moderada": "",
+    "actores_territoriales": ""
+  }},
+  "recomendacion_polidoxa": "",
+  "fuentes": [
+    {{
+      "titulo": "",
+      "link": ""
+    }}
+  ]
+}}
 """
 
     response = client.responses.create(
@@ -129,94 +138,240 @@ Incluí los links principales usados.
         input=prompt
     )
 
-    return response.output_text
+    return json.loads(response.output_text)
 
 
-# =========================
-# 3. GENERAR PDF
-# =========================
+def armar_mensaje_whatsapp(data, pdf_url, dashboard_url):
+    ejes = "\n".join([
+        f"- {e['tema']} | Riesgo: {e['riesgo']}"
+        for e in data["ejes_secundarios"][:3]
+    ])
 
-def generar_pdf(informe):
-    archivo_pdf = "polidoxa_intelligence_brief.pdf"
+    alertas = "\n".join([
+        f"- {a['nivel'].upper()}: {a['tema']}"
+        for a in data["alertas"][:3]
+    ])
 
-    doc = SimpleDocTemplate(archivo_pdf, pagesize=A4)
+    fuentes = "\n".join([
+        f"- {f['titulo']}: {f['link']}"
+        for f in data["fuentes"][:3]
+    ])
+
+    return f"""
+📊 POLIDOXA | INTELLIGENCE BRIEF ARGENTINA
+📅 {data['fecha']}
+
+1. RESUMEN EJECUTIVO
+{data['resumen_ejecutivo']}
+
+2. TEMA DOMINANTE
+{data['tema_dominante']['tema']}
+Riesgo: {data['tema_dominante']['riesgo']}
+{data['tema_dominante']['descripcion']}
+
+3. EJES SECUNDARIOS
+{ejes}
+
+4. ALERTAS
+{alertas}
+
+5. RECOMENDACIÓN POLIDOXA
+{data['recomendacion_polidoxa']}
+
+🔗 PDF: {pdf_url}
+📊 Dashboard: {dashboard_url}
+
+FUENTES
+{fuentes}
+""".strip()
+
+
+def generar_pdf(data):
+    archivo = f"polidoxa_brief_{fecha_archivo}.pdf"
+    doc = SimpleDocTemplate(archivo, pagesize=A4)
     styles = getSampleStyleSheet()
-
     contenido = []
+
     contenido.append(Paragraph("<b>POLIDOXA | INTELLIGENCE BRIEF ARGENTINA</b>", styles["Title"]))
-    contenido.append(Spacer(1, 12))
-    contenido.append(Paragraph(f"<b>Fecha:</b> {hoy}", styles["Normal"]))
+    contenido.append(Paragraph(f"<b>Fecha:</b> {data['fecha']}", styles["Normal"]))
     contenido.append(Spacer(1, 12))
 
-    for linea in informe.split("\n"):
-        if linea.strip():
-            texto = linea.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            contenido.append(Paragraph(texto, styles["Normal"]))
-            contenido.append(Spacer(1, 6))
+    secciones = [
+        ("1. Resumen ejecutivo", data["resumen_ejecutivo"]),
+        ("2. Tema dominante", f"{data['tema_dominante']['tema']} | Riesgo: {data['tema_dominante']['riesgo']}<br/>{data['tema_dominante']['descripcion']}"),
+        ("3. Batalla narrativa", f"Oficialismo: {data['narrativas']['oficialismo']}<br/>Oposición: {data['narrativas']['oposicion']}<br/>Social emergente: {data['narrativas']['social_emergente']}"),
+        ("4. Recomendación Polidoxa", data["recomendacion_polidoxa"]),
+    ]
+
+    for titulo, texto in secciones:
+        contenido.append(Paragraph(f"<b>{titulo}</b>", styles["Heading2"]))
+        contenido.append(Paragraph(str(texto), styles["Normal"]))
+        contenido.append(Spacer(1, 10))
+
+    contenido.append(Paragraph("<b>5. Fuentes</b>", styles["Heading2"]))
+    for f in data["fuentes"]:
+        contenido.append(Paragraph(f"{f['titulo']}<br/>{f['link']}", styles["Normal"]))
+        contenido.append(Spacer(1, 6))
 
     doc.build(contenido)
+    return archivo
 
-    return archivo_pdf
+
+def generar_dashboard_html(data):
+    html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Polidoxa Dashboard</title>
+<style>
+body {{ font-family: Arial; background:#f4f7f7; color:#163B3F; padding:30px; }}
+.card {{ background:white; padding:20px; border-radius:14px; margin-bottom:18px; box-shadow:0 2px 8px rgba(0,0,0,.08); }}
+h1 {{ color:#0E6F78; }}
+.metric {{ display:inline-block; width:22%; background:#e7f3f3; padding:15px; border-radius:12px; margin:5px; }}
+.red {{ color:#b00020; font-weight:bold; }}
+</style>
+</head>
+<body>
+<h1>POLIDOXA | DASHBOARD DE RIESGO POLÍTICO</h1>
+<p><b>Fecha:</b> {data['fecha']}</p>
+
+<div class="card">
+<h2>Tema dominante</h2>
+<p><b>{data['tema_dominante']['tema']}</b></p>
+<p>{data['tema_dominante']['descripcion']}</p>
+<p><b>Riesgo:</b> {data['tema_dominante']['riesgo']}</p>
+</div>
+
+<div class="card">
+<h2>Matriz de riesgo</h2>
+<div class="metric">Riesgo político<br><b>{data['matriz_riesgo']['riesgo_politico']}/100</b></div>
+<div class="metric">Viralidad<br><b>{data['matriz_riesgo']['viralidad']}/100</b></div>
+<div class="metric">Daño reputacional<br><b>{data['matriz_riesgo']['danio_reputacional']}/100</b></div>
+<div class="metric">Oportunidad<br><b>{data['matriz_riesgo']['oportunidad_comunicacional']}/100</b></div>
+</div>
+
+<div class="card">
+<h2>Alertas</h2>
+<ul>
+{''.join([f"<li><b>{a['nivel'].upper()}</b>: {a['tema']} — {a['motivo']}</li>" for a in data['alertas']])}
+</ul>
+</div>
+
+<div class="card">
+<h2>Fuentes</h2>
+<ul>
+{''.join([f"<li><a href='{f['link']}'>{f['titulo']}</a></li>" for f in data['fuentes']])}
+</ul>
+</div>
+
+</body>
+</html>
+"""
+    archivo = "index.html"
+    with open(archivo, "w", encoding="utf-8") as f:
+        f.write(html)
+    return archivo
 
 
-# =========================
-# 4. ENVIAR WHATSAPP
-# =========================
+def generar_csv_dashboard(data):
+    archivo = "dashboard_polidoxa.csv"
+    existe = os.path.exists(archivo)
+
+    with open(archivo, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+
+        if not existe:
+            writer.writerow([
+                "fecha", "tema_dominante", "riesgo", "riesgo_politico",
+                "viralidad", "danio_reputacional", "oportunidad"
+            ])
+
+        writer.writerow([
+            data["fecha"],
+            data["tema_dominante"]["tema"],
+            data["tema_dominante"]["riesgo"],
+            data["matriz_riesgo"]["riesgo_politico"],
+            data["matriz_riesgo"]["viralidad"],
+            data["matriz_riesgo"]["danio_reputacional"],
+            data["matriz_riesgo"]["oportunidad_comunicacional"]
+        ])
+
+    return archivo
+
+
+def subir_a_github(local_file, repo_path):
+    url = f"https://api.github.com/repos/{REPO}/contents/{repo_path}"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    with open(local_file, "rb") as f:
+        content = base64.b64encode(f.read()).decode()
+
+    sha = None
+    get = requests.get(url, headers=headers, params={"ref": BRANCH})
+    if get.status_code == 200:
+        sha = get.json()["sha"]
+
+    payload = {
+        "message": f"Actualizar {repo_path} - {fecha_archivo}",
+        "content": content,
+        "branch": BRANCH
+    }
+
+    if sha:
+        payload["sha"] = sha
+
+    r = requests.put(url, headers=headers, json=payload)
+    r.raise_for_status()
+
 
 def enviar_whatsapp(mensaje):
-    twilio_client.messages.create(
+    twilio.messages.create(
         from_=TWILIO_FROM,
         to=TWILIO_TO,
         body=mensaje[:1500]
     )
 
 
-# =========================
-# 5. ALERTA AUTOMÁTICA
-# =========================
-
-def detectar_alerta(informe):
-    palabras_alerta = [
-        "crisis",
-        "escándalo",
-        "conflicto",
-        "denuncia",
-        "corrupción",
-        "represión",
-        "paro",
-        "protesta",
-        "judicialización",
-        "riesgo alto",
-        "riesgo crítico",
-        "alerta roja"
-    ]
-
-    informe_lower = informe.lower()
-
-    return any(palabra in informe_lower for palabra in palabras_alerta)
+def enviar_pdf_whatsapp(pdf_url, mensaje):
+    twilio.messages.create(
+        from_=TWILIO_FROM,
+        to=TWILIO_TO,
+        body=mensaje,
+        media_url=[pdf_url]
+    )
 
 
-# =========================
-# 6. EJECUCIÓN PRINCIPAL
-# =========================
+def hay_alerta_roja(data):
+    return any(a["nivel"].lower() == "roja" for a in data["alertas"])
+
 
 noticias = obtener_noticias()
 
 if not noticias:
-    mensaje_error = "POLIDOXA | ERROR: No se encontraron noticias para analizar."
-    enviar_whatsapp(mensaje_error)
-    print(mensaje_error)
-
+    enviar_whatsapp("POLIDOXA | ERROR: no se encontraron noticias para analizar.")
 else:
-    informe = analizar_agenda(noticias)
+    data = analizar_agenda(noticias)
 
-    generar_pdf(informe)
+    pdf = generar_pdf(data)
+    html = generar_dashboard_html(data)
+    csv_file = generar_csv_dashboard(data)
 
-    mensaje_whatsapp = informe[:1400] + "\n\n📄 PDF generado automáticamente por Polidoxa."
+    subir_a_github(pdf, f"docs/{pdf}")
+    subir_a_github(html, "docs/index.html")
+    subir_a_github(csv_file, "dashboard/dashboard_polidoxa.csv")
 
-    enviar_whatsapp(mensaje_whatsapp)
+    pdf_url = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}/docs/{pdf}"
+    dashboard_url = f"https://{REPO.split('/')[0]}.github.io/{REPO.split('/')[1]}/"
 
-    if detectar_alerta(informe):
-        enviar_whatsapp("🚨 POLIDOXA ALERTA: posible foco de crisis detectado en la agenda pública argentina.")
+    mensaje = armar_mensaje_whatsapp(data, pdf_url, dashboard_url)
 
-    print(informe)
+    enviar_whatsapp(mensaje)
+
+    if hay_alerta_roja(data):
+        enviar_whatsapp("🚨 POLIDOXA ALERTA ROJA: se detectó un foco de crisis de alto riesgo en la agenda pública argentina.")
+
+    print(mensaje)
