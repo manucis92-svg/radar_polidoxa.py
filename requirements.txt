@@ -1,6 +1,6 @@
 openai
 requests
 beautifulsoup4
-reportlab
 twilio
+reportlab
 lxml
