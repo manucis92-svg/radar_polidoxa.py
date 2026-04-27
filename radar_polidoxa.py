@@ -21,45 +21,6 @@ fecha_archivo = datetime.now().strftime("%Y-%m-%d")
 
 
 def obtener_noticias():
-def calcular_score_temas(noticias):
-    temas = {
-        "Gobierno nacional": ["gobierno", "milei", "adorni", "presidente"],
-        "Economía": ["economía", "inflación", "dólar", "actividad", "industria", "salarios"],
-        "Congreso": ["congreso", "diputados", "senado", "ley", "reforma"],
-        "Conflicto social": ["paro", "protesta", "sindicatos", "cgt", "marcha"],
-        "Elecciones": ["elecciones", "encuesta", "campaña", "candidato", "votos"],
-        "Justicia": ["justicia", "juez", "fallo", "denuncia", "causa"],
-        "Política exterior": ["malvinas", "reino unido", "eeuu", "china", "israel"]
-    }
-
-    resultado = []
-
-    for tema, palabras in temas.items():
-        menciones = 0
-
-        for noticia in noticias:
-            titulo = noticia["titulo"].lower()
-            if any(p in titulo for p in palabras):
-                menciones += 1
-
-        if menciones > 0:
-            score = min(menciones * 15, 100)
-
-            if score >= 70:
-                riesgo = "alto"
-            elif score >= 40:
-                riesgo = "medio"
-            else:
-                riesgo = "bajo"
-
-            resultado.append({
-                "tema": tema,
-                "menciones": menciones,
-                "score": score,
-                "riesgo": riesgo
-            })
-
-    resultado = sorted(resultado, key=lambda x: x["score"], reverse=True)
 
     return resultado
     urls = [
