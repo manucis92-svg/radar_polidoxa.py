@@ -22,7 +22,6 @@ fecha_archivo = datetime.now().strftime("%Y-%m-%d")
 
 def obtener_noticias():
 
-    return resultado
     urls = [
         "https://news.google.com/rss/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419",
         "https://news.google.com/rss/search?q=economia%20argentina%20gobierno&hl=es-419&gl=AR&ceid=AR:es-419",
