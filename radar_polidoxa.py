@@ -64,73 +64,56 @@ def analizar_agenda(noticias):
     )
 
     prompt = f"""
-Sos director de inteligencia política de Polidoxa, una consultora internacional de escucha digital, opinión pública y análisis estratégico.
+Sos director de inteligencia política de la consultora Polidoxa.
 
-IMPORTANTE:
-- No inventes información.
-- Usá únicamente las noticias listadas.
-- Si un tema aparece una sola vez, tratálo como señal débil.
-- Priorizá temas repetidos, actores centrales, riesgo político y oportunidades de comunicación.
-- Incluí links reales de las noticias usadas.
+Tu trabajo es elaborar un informe profesional BASADO EXCLUSIVAMENTE en la evidencia disponible.
+
+REGLAS OBLIGATORIAS:
+- NO inventes información.
+- NO agregues datos externos.
+- NO infieras tendencias sin repetición en las noticias.
+- Solo podés usar lo que aparece en las noticias listadas.
+- Si un tema aparece una sola vez, indicarlo como "señal débil".
+- Si no hay suficiente evidencia, decir: "baja densidad informativa".
+- No proyectes escenarios futuros (ej: elecciones, crisis, derrotas).
+- No menciones actores que no estén explícitamente en las noticias.
 
 Noticias relevadas:
 {texto_noticias}
 
-Devolvé SOLO un JSON válido, sin texto adicional, con esta estructura:
+Generá un informe ejecutivo breve y riguroso.
 
-{{
-  "titulo": "POLIDOXA | INTELLIGENCE BRIEF ARGENTINA",
-  "fecha": "{hoy}",
-  "resumen_ejecutivo": "máximo 4 líneas",
-  "tema_dominante": {{
-    "tema": "",
-    "descripcion": "",
-    "actores": [],
-    "riesgo": "bajo/medio/alto/crítico"
-  }},
-  "ejes_secundarios": [
-    {{
-      "tema": "",
-      "impacto": "",
-      "riesgo": "bajo/medio/alto/crítico"
-    }}
-  ],
-  "matriz_riesgo": {{
-    "riesgo_politico": 0,
-    "viralidad": 0,
-    "danio_reputacional": 0,
-    "oportunidad_comunicacional": 0
-  }},
-  "narrativas": {{
-    "oficialismo": "",
-    "oposicion": "",
-    "social_emergente": ""
-  }},
-  "actores_clave": {{
-    "ganan": [],
-    "pierden": [],
-    "expuestos": []
-  }},
-  "alertas": [
-    {{
-      "nivel": "roja/amarilla/verde",
-      "tema": "",
-      "motivo": ""
-    }}
-  ],
-  "oportunidades": {{
-    "oficialismo": "",
-    "oposicion_moderada": "",
-    "actores_territoriales": ""
-  }},
-  "recomendacion_polidoxa": "",
-  "fuentes": [
-    {{
-      "titulo": "",
-      "link": ""
-    }}
-  ]
-}}
+Formato:
+
+📊 POLIDOXA | INTELLIGENCE BRIEF ARGENTINA
+📅 Fecha: {hoy}
+
+1. RESUMEN EJECUTIVO
+Solo hechos observables. Máximo 3 líneas.
+
+2. TEMA DOMINANTE
+- Tema
+- Descripción basada en hechos
+- Actores mencionados en las noticias
+- Nivel de riesgo (bajo/medio/alto) SOLO si hay evidencia
+
+3. EJES SECUNDARIOS
+Máximo 3:
+- tema
+- evidencia (qué noticia lo respalda)
+- riesgo (solo si aplica)
+
+4. ALERTAS
+Solo si hay evidencia clara:
+- ROJA (riesgo alto real)
+- AMARILLA (tensión)
+- VERDE (sin riesgo)
+
+5. RECOMENDACIÓN POLIDOXA
+Solo recomendaciones prudentes basadas en lo observado.
+
+6. FUENTES
+Listar links utilizados.
 """
 
     response = client.responses.create(
