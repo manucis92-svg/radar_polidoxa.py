@@ -5,6 +5,9 @@ on:
     - cron: "0 12 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   ejecutar:
     runs-on: ubuntu-latest
@@ -29,3 +32,4 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
           TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
           TWILIO_TO: ${{ secrets.TWILIO_TO }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
