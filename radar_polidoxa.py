@@ -34,7 +34,6 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 
 def obtener_noticias():
-    print("Noticias:", noticias)
     import requests
     from bs4 import BeautifulSoup
 
