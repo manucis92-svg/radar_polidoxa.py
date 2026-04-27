@@ -1,0 +1,27 @@
+name: Radar Polidoxa
+
+on:
+  schedule:
+    - cron: "0 12 * * *"   # 09:00 Argentina
+  workflow_dispatch:
+
+jobs:
+  ejecutar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar librerías
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar agente
+        run: python radar_polidoxa.py
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
