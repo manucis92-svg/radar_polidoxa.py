@@ -1,8 +1,17 @@
 import os
 import requests
+from datetime import datetime
 from bs4 import BeautifulSoup
 from openai import OpenAI
 from twilio.rest import Client
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+
+
+# =========================
+# CONFIGURACIÓN
+# =========================
 
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
@@ -14,32 +23,21 @@ twilio_client = Client(
 TWILIO_FROM = os.environ["TWILIO_FROM"]
 TWILIO_TO = os.environ["TWILIO_TO"]
 
+hoy = datetime.now().strftime("%d/%m/%Y")
+
+
+# =========================
+# 1. OBTENER NOTICIAS
+# =========================
 
 def obtener_noticias():
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-
-def generar_pdf(informe):
-    doc = SimpleDocTemplate("polidoxa_brief.pdf", pagesize=A4)
-    styles = getSampleStyleSheet()
-
-    contenido = []
-    contenido.append(Paragraph("<b>POLIDOXA | INTELLIGENCE BRIEF</b>", styles["Title"]))
-    contenido.append(Spacer(1, 12))
-
-    for linea in informe.split("\n"):
-        contenido.append(Paragraph(linea, styles["Normal"]))
-        contenido.append(Spacer(1, 6))
-
-    doc.build(contenido)
     url = "https://news.google.com/rss/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "xml")
 
     noticias = []
 
-    for item in soup.find_all("item")[:10]:
+    for item in soup.find_all("item")[:12]:
         noticias.append({
             "titulo": item.title.text,
             "link": item.link.text
@@ -48,7 +46,16 @@ def generar_pdf(informe):
     return noticias
 
 
-prompt = f"""
+# =========================
+# 2. ANALIZAR AGENDA
+# =========================
+
+def analizar_agenda(noticias):
+    texto_noticias = "\n".join(
+        [f"- {n['titulo']} | Link: {n['link']}" for n in noticias]
+    )
+
+    prompt = f"""
 Sos director de inteligencia política de Polidoxa, una consultora especializada en escucha digital, opinión pública y análisis estratégico.
 
 Trabajás con estándares de consultoría internacional: claridad ejecutiva, análisis de riesgo, lectura narrativa, impacto político y recomendaciones accionables.
@@ -125,6 +132,37 @@ Incluí los links principales usados.
     return response.output_text
 
 
+# =========================
+# 3. GENERAR PDF
+# =========================
+
+def generar_pdf(informe):
+    archivo_pdf = "polidoxa_intelligence_brief.pdf"
+
+    doc = SimpleDocTemplate(archivo_pdf, pagesize=A4)
+    styles = getSampleStyleSheet()
+
+    contenido = []
+    contenido.append(Paragraph("<b>POLIDOXA | INTELLIGENCE BRIEF ARGENTINA</b>", styles["Title"]))
+    contenido.append(Spacer(1, 12))
+    contenido.append(Paragraph(f"<b>Fecha:</b> {hoy}", styles["Normal"]))
+    contenido.append(Spacer(1, 12))
+
+    for linea in informe.split("\n"):
+        if linea.strip():
+            texto = linea.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+            contenido.append(Paragraph(texto, styles["Normal"]))
+            contenido.append(Spacer(1, 6))
+
+    doc.build(contenido)
+
+    return archivo_pdf
+
+
+# =========================
+# 4. ENVIAR WHATSAPP
+# =========================
+
 def enviar_whatsapp(mensaje):
     twilio_client.messages.create(
         from_=TWILIO_FROM,
@@ -133,9 +171,52 @@ def enviar_whatsapp(mensaje):
     )
 
 
-noticias = obtener_noticias
-informe = analizar_agenda(noticias)
-generar_pdf(informe)
-enviar_whatsapp(informe)
+# =========================
+# 5. ALERTA AUTOMÁTICA
+# =========================
 
-print(informe)
+def detectar_alerta(informe):
+    palabras_alerta = [
+        "crisis",
+        "escándalo",
+        "conflicto",
+        "denuncia",
+        "corrupción",
+        "represión",
+        "paro",
+        "protesta",
+        "judicialización",
+        "riesgo alto",
+        "riesgo crítico",
+        "alerta roja"
+    ]
+
+    informe_lower = informe.lower()
+
+    return any(palabra in informe_lower for palabra in palabras_alerta)
+
+
+# =========================
+# 6. EJECUCIÓN PRINCIPAL
+# =========================
+
+noticias = obtener_noticias()
+
+if not noticias:
+    mensaje_error = "POLIDOXA | ERROR: No se encontraron noticias para analizar."
+    enviar_whatsapp(mensaje_error)
+    print(mensaje_error)
+
+else:
+    informe = analizar_agenda(noticias)
+
+    generar_pdf(informe)
+
+    mensaje_whatsapp = informe[:1400] + "\n\n📄 PDF generado automáticamente por Polidoxa."
+
+    enviar_whatsapp(mensaje_whatsapp)
+
+    if detectar_alerta(informe):
+        enviar_whatsapp("🚨 POLIDOXA ALERTA: posible foco de crisis detectado en la agenda pública argentina.")
+
+    print(informe)
