@@ -1,6 +1,6 @@
 
 
-!pip install openai requests beautifulsoup4 reportlab
+
 
 
 
@@ -101,9 +101,7 @@ print(informe)
 generar_pdf(informe)
 
 
-!pip install reportlab
 
-!pip install openai requests beautifulsoup4 reportlab
 
 
 
