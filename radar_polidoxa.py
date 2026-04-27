@@ -1,5 +1,10 @@
-from twilio.rest import Client
 import os
+import requests
+from bs4 import BeautifulSoup
+from openai import OpenAI
+from twilio.rest import Client
+
+client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 twilio_client = Client(
     os.environ["TWILIO_ACCOUNT_SID"],
@@ -10,68 +15,46 @@ TWILIO_FROM = os.environ["TWILIO_FROM"]
 TWILIO_TO = os.environ["TWILIO_TO"]
 
 
-
-
-
-
-import os
-import requests
-from bs4 import BeautifulSoup
-from openai import OpenAI
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-
-import os
-from openai import OpenAI
-
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-import requests
-from bs4 import BeautifulSoup
-from openai import OpenAI
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-
 def obtener_noticias():
-    import requests
-    from bs4 import BeautifulSoup
-
     url = "https://news.google.com/rss/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419"
     response = requests.get(url)
-
     soup = BeautifulSoup(response.content, "xml")
 
     noticias = []
 
     for item in soup.find_all("item")[:10]:
-        titulo = item.title.text
-        link = item.link.text
-        noticias.append({"titulo": titulo, "link": link})
+        noticias.append({
+            "titulo": item.title.text,
+            "link": item.link.text
+        })
 
     return noticias
 
 
 def analizar_agenda(noticias):
-    texto = "\n".join([f"- {n['titulo']}" for n in noticias])
+    texto_noticias = "\n".join(
+        [f"- {n['titulo']} | Link: {n['link']}" for n in noticias]
+    )
 
     prompt = f"""
-Sos un analista político de la consultora Polidoxa.
+Sos consultor senior de la consultora Polidoxa.
 
-A partir de estas noticias de Argentina:
+Analizá la agenda pública y política argentina a partir de estas noticias reales:
 
-{texto}
+{texto_noticias}
 
-Elaborá un informe breve con:
+Elaborá un informe breve para WhatsApp con este formato:
 
-- Tema dominante
-- Ejes secundarios
-- Actores clave
-- Narrativas
-- Alertas de crisis
-- Clima general
-- Oportunidades de comunicación
-- Síntesis ejecutiva
+POLIDOXA | RADAR PÚBLICO ARGENTINA
+
+1. Tema dominante:
+2. Ejes secundarios:
+3. Actores clave:
+4. Narrativas en disputa:
+5. Alertas de crisis:
+6. Clima general:
+7. Oportunidades de comunicación:
+8. Síntesis ejecutiva:
 """
 
     response = client.responses.create(
@@ -82,142 +65,16 @@ Elaborá un informe breve con:
     return response.output_text
 
 
-def generar_pdf(informe):
-    doc = SimpleDocTemplate("radar_polidoxa.pdf", pagesize=A4)
-    styles = getSampleStyleSheet()
-
-    contenido = []
-    contenido.append(Paragraph("<b>POLIDOXA | RADAR PÚBLICO</b>", styles["Title"]))
-
-    for linea in informe.split("\n"):
-        contenido.append(Paragraph(linea, styles["Normal"]))
-
-    doc.build(contenido)
-
-
-noticias = obtener_noticias()
-informe = analizar_agenda(noticias)
-
-print(informe)
-
-generar_pdf(informe)
-
-
-
-
-
-
-
-import os
-import requests
-from bs4 import BeautifulSoup
-from openai import OpenAI
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-
-import os
-from openai import OpenAI
-
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-import requests
-from bs4 import BeautifulSoup
-from openai import OpenAI
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import A4
-
-def obtener_noticias():
-    url = "https://news.google.com/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    noticias = []
-
-    for item in soup.find_all("article")[:10]:
-        link = item.find("a")
-        if link:
-            titulo = link.text
-            href = "https://news.google.com" + link.get("href")[1:]
-            noticias.append({"titulo": titulo, "link": href})
-
-    return noticias
-
-
-def analizar_agenda(noticias):
-    texto = "\n".join([f"- {n['titulo']} ({n['link']})" for n in noticias])
-
-    prompt = f"""
-    Sos consultor senior de Polidoxa.
-
-    Analizá esta agenda política argentina:
-
-    {texto}
-
-    Respondé en formato profesional:
-
-    🔴 TEMA DOMINANTE:
-    (breve)
-
-    🟠 EJES SECUNDARIOS:
-    (3 puntos)
-
-    👥 ACTORES CLAVE:
-
-    🧠 NARRATIVAS:
-
-    🚨 ALERTAS:
-
-    📈 CLIMA GENERAL:
-
-    🎯 OPORTUNIDADES:
-
-    🧩 SÍNTESIS EJECUTIVA:
-    """
-
-    response = client.responses.create(
-        model="gpt-4.1-mini",
-        input=prompt
+def enviar_whatsapp(mensaje):
+    twilio_client.messages.create(
+        from_=TWILIO_FROM,
+        to=TWILIO_TO,
+        body=mensaje[:1500]
     )
 
-    return response.output_text
-
-
-def generar_pdf(informe):
-    doc = SimpleDocTemplate("radar_polidoxa.pdf", pagesize=A4)
-    styles = getSampleStyleSheet()
-
-    contenido = []
-    contenido.append(Paragraph("<b>POLIDOXA | RADAR PÚBLICO</b>", styles["Title"]))
-
-    for linea in informe.split("\n"):
-        contenido.append(Paragraph(linea, styles["Normal"]))
-
-    doc.build(contenido)
-
 
 noticias = obtener_noticias()
 informe = analizar_agenda(noticias)
+enviar_whatsapp(informe)
 
 print(informe)
-twilio_client.messages.create(
-    from_=TWILIO_FROM,
-    to=TWILIO_TO,
-    body=informe[:1500]
-)
-generar_pdf(informe)
-
-
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-
-
-
-
-with open("radar_polidoxa.txt", "w") as f:
-    f.write(informe)
-
-
-
-
-with open("radar_polidoxa.txt", "w") as f:
-    f.write(informe)
