@@ -378,7 +378,57 @@ noticias = obtener_noticias()
 if not noticias:
     enviar_whatsapp("POLIDOXA | ERROR: no se encontraron noticias para analizar.")
 else:
-    data = analizar_agenda(noticias)
+    def analizar_agenda(noticias):
+    texto_noticias = "\n".join(
+        [f"- {n['titulo']} | Link: {n['link']}" for n in noticias]
+    )
+
+    scores = calcular_score_temas(noticias)
+
+    texto_scores = "\n".join([
+        f"- {s['tema']}: {s['menciones']} menciones | Score {s['score']}/100 | Riesgo {s['riesgo']}"
+        for s in scores
+    ])
+
+    prompt = f"""
+Sos director de inteligencia política de la consultora Polidoxa.
+
+REGLAS:
+- No inventes información
+- Usá solo las noticias
+- Si un tema aparece poco, marcarlo como señal débil
+- No proyectes escenarios
+
+Noticias:
+{texto_noticias}
+
+Análisis cuantitativo Polidoxa:
+{texto_scores}
+
+Generá informe:
+
+📊 POLIDOXA | INTELLIGENCE BRIEF ARGENTINA
+📅 Fecha: {hoy}
+
+1. RESUMEN EJECUTIVO
+
+2. TEMA DOMINANTE (basado en mayor score)
+
+3. EJES SECUNDARIOS (máx 3)
+
+4. ALERTAS
+
+5. RECOMENDACIÓN
+
+6. FUENTES (links reales)
+"""
+
+    response = client.responses.create(
+        model="gpt-4.1-mini",
+        input=prompt
+    )
+
+    return response.output_text
 
     pdf = generar_pdf(data)
     html = generar_dashboard_html(data)
