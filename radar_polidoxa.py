@@ -34,18 +34,20 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
 
 def obtener_noticias():
-    url = "https://news.google.com/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419"
+    import requests
+    from bs4 import BeautifulSoup
+
+    url = "https://news.google.com/rss/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419"
     response = requests.get(url)
-    soup = BeautifulSoup(response.text, "html.parser")
+
+    soup = BeautifulSoup(response.content, "xml")
 
     noticias = []
 
-    for item in soup.find_all("article")[:10]:
-        link = item.find("a")
-        if link:
-            titulo = link.text
-            href = "https://news.google.com" + link.get("href")[1:]
-            noticias.append({"titulo": titulo, "link": href})
+    for item in soup.find_all("item")[:15]:
+        titulo = item.title.text
+        link = item.link.text
+        noticias.append({"titulo": titulo, "link": link})
 
     return noticias
 
