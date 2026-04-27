@@ -53,35 +53,26 @@ def obtener_noticias():
 
 
 def analizar_agenda(noticias):
-    texto = "\n".join([f"- {n['titulo']} ({n['link']})" for n in noticias])
+    texto = "\n".join([f"- {n['titulo']}" for n in noticias])
 
     prompt = f"""
-    Sos consultor senior de Polidoxa.
+Sos un analista político de la consultora Polidoxa.
 
-    Analizá esta agenda política argentina:
+A partir de estas noticias de Argentina:
 
-    {texto}
+{texto}
 
-    Respondé en formato profesional:
+Elaborá un informe breve con:
 
-    🔴 TEMA DOMINANTE:
-    (breve)
-
-    🟠 EJES SECUNDARIOS:
-    (3 puntos)
-
-    👥 ACTORES CLAVE:
-
-    🧠 NARRATIVAS:
-
-    🚨 ALERTAS:
-
-    📈 CLIMA GENERAL:
-
-    🎯 OPORTUNIDADES:
-
-    🧩 SÍNTESIS EJECUTIVA:
-    """
+- Tema dominante
+- Ejes secundarios
+- Actores clave
+- Narrativas
+- Alertas de crisis
+- Clima general
+- Oportunidades de comunicación
+- Síntesis ejecutiva
+"""
 
     response = client.responses.create(
         model="gpt-4.1-mini",
