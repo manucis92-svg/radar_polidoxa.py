@@ -1,4 +1,13 @@
+from twilio.rest import Client
+import os
 
+twilio_client = Client(
+    os.environ["TWILIO_ACCOUNT_SID"],
+    os.environ["TWILIO_AUTH_TOKEN"]
+)
+
+TWILIO_FROM = os.environ["TWILIO_FROM"]
+TWILIO_TO = os.environ["TWILIO_TO"]
 
 
 
@@ -198,7 +207,11 @@ noticias = obtener_noticias()
 informe = analizar_agenda(noticias)
 
 print(informe)
-
+twilio_client.messages.create(
+    from_=TWILIO_FROM,
+    to=TWILIO_TO,
+    body=informe[:1500]
+)
 generar_pdf(informe)
 
 
