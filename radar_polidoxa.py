@@ -16,6 +16,23 @@ TWILIO_TO = os.environ["TWILIO_TO"]
 
 
 def obtener_noticias():
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+
+def generar_pdf(informe):
+    doc = SimpleDocTemplate("polidoxa_brief.pdf", pagesize=A4)
+    styles = getSampleStyleSheet()
+
+    contenido = []
+    contenido.append(Paragraph("<b>POLIDOXA | INTELLIGENCE BRIEF</b>", styles["Title"]))
+    contenido.append(Spacer(1, 12))
+
+    for linea in informe.split("\n"):
+        contenido.append(Paragraph(linea, styles["Normal"]))
+        contenido.append(Spacer(1, 6))
+
+    doc.build(contenido)
     url = "https://news.google.com/rss/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419"
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "xml")
@@ -116,8 +133,9 @@ def enviar_whatsapp(mensaje):
     )
 
 
-noticias = obtener_noticias()
+noticias = obtener_noticias
 informe = analizar_agenda(noticias)
+generar_pdf(informe)
 enviar_whatsapp(informe)
 
 print(informe)
