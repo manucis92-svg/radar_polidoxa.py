@@ -57,7 +57,7 @@ def obtener_noticias():
             if len(noticias) >= 18:
                 break
 
-    return noticias[:18]
+    return resultados
 
 
 def analizar_agenda(noticias):
