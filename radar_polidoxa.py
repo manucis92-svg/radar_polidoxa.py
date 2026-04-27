@@ -1,4 +1,4 @@
-!pip install reportlab
+
 
 !pip install openai requests beautifulsoup4 reportlab
 
