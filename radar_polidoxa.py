@@ -205,16 +205,12 @@ generar_pdf(informe)
 client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 
-from google.colab import files
-files.download("radar_polidoxa.pdf")
 
 
 with open("radar_polidoxa.txt", "w") as f:
     f.write(informe)
 
 
-from google.colab import files
-files.download("radar_polidoxa.pdf")
 
 
 with open("radar_polidoxa.txt", "w") as f:
