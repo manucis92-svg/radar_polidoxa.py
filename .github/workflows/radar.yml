@@ -2,7 +2,7 @@ name: Radar Polidoxa
 
 on:
   schedule:
-    - cron: "0 12 * * *"   # 09:00 Argentina
+    - cron: "0 12 * * *"
   workflow_dispatch:
 
 jobs:
@@ -22,12 +22,10 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Ejecutar agente
-  run: python radar_polidoxa.py
-  env:
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-    TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
-    TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
-    TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
-    TWILIO_TO: ${{ secrets.TWILIO_TO }}
+        run: python radar_polidoxa.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
+          TWILIO_TO: ${{ secrets.TWILIO_TO }}
