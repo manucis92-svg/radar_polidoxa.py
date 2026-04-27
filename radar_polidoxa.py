@@ -21,7 +21,7 @@ fecha_archivo = datetime.now().strftime("%Y-%m-%d")
 
 
 def obtener_noticias():
-    def calcular_score_temas(noticias):
+def calcular_score_temas(noticias):
     temas = {
         "Gobierno nacional": ["gobierno", "milei", "adorni", "presidente"],
         "Economía": ["economía", "inflación", "dólar", "actividad", "industria", "salarios"],
