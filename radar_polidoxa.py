@@ -361,7 +361,11 @@ else:
     print("MENSAJE A ENVIAR:")
 print(mensaje)
 
+print("MENSAJE A ENVIAR:")
+print(mensaje)
+print("FIN MENSAJE")
 enviar_whatsapp(mensaje)
+
 enviar_pdf_whatsapp(pdf_url)
 
 if hay_alerta_roja(data):
