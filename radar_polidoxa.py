@@ -64,14 +64,13 @@ def analizar_agenda(noticias):
     )
 
     prompt = f"""
-Sos director de inteligencia política de Polidoxa.
+Sos director de la consultoria política de Polidoxa.
 
 REGLAS:
-- No inventes información.
-- Usá únicamente estas noticias.
-- Si un tema aparece una sola vez, marcá "señal débil".
+- No uses expresiones como "crisis", "derrota", "caída significativa" o "desgaste" salvo que aparezcan explícitamente en más de una noticia.
+- Si un tema aparece en una sola noticia, marcarlo como "señal débil".
 - No proyectes escenarios futuros.
-- Incluí links reales.
+- Diferenciar entre hechos observables y análisis.
 
 Noticias:
 {texto_noticias}
