@@ -153,17 +153,12 @@ def generar_pdf(data):
         contenido.append(Spacer(1, 10))
 
     contenido.append(Paragraph("<b>5. Fuentes</b>", styles["Heading2"]))
-    for f in data["fuentes"]:
-        contenido.append(
-        Paragraph(
-            f'• <a href="{f["link"]}">{f["titulo"]}</a>',
-            styles["Normal"]
-        )
-    )
-    contenido.append(Spacer(1, 6))
-        contenido.append(Paragraph(f"{f['titulo']}<br/>{f['link']}", styles["Normal"]))
-        contenido.append(Spacer(1, 6))
+   contenido.append(Paragraph("<b>5. Fuentes</b>", styles["Heading2"]))
 
+for f in data["fuentes"]:
+    texto = f"{f['titulo']} - {f['link']}"
+    contenido.append(Paragraph(texto, styles["Normal"]))
+    contenido.append(Spacer(1, 6))
     doc.build(contenido)
     return archivo
 
