@@ -154,7 +154,7 @@ def generar_pdf(data):
 
     contenido.append(Paragraph("<b>5. Fuentes</b>", styles["Heading2"]))
     for f in data["fuentes"]:
-    contenido.append(
+        contenido.append(
         Paragraph(
             f'• <a href="{f["link"]}">{f["titulo"]}</a>',
             styles["Normal"]
