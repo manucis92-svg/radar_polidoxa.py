@@ -358,7 +358,10 @@ else:
 
     mensaje = armar_mensaje_whatsapp(data, pdf_url, dashboard_url)
 
-    enviar_whatsapp(mensaje)
+    print("MENSAJE A ENVIAR:")
+print(mensaje)
+
+enviar_whatsapp(mensaje)
     enviar_pdf_whatsapp(pdf_url)
 
     if hay_alerta_roja(data):
