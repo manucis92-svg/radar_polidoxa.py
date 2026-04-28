@@ -21,7 +21,6 @@ fecha_archivo = datetime.now().strftime("%Y-%m-%d")
 
 
 def obtener_noticias():
-
     urls = [
         "https://news.google.com/rss/search?q=politica%20argentina&hl=es-419&gl=AR&ceid=AR:es-419",
         "https://news.google.com/rss/search?q=economia%20argentina%20gobierno&hl=es-419&gl=AR&ceid=AR:es-419",
@@ -56,7 +55,7 @@ def obtener_noticias():
             if len(noticias) >= 18:
                 break
 
-    return resultados
+    return noticias
 
 
 def analizar_agenda(noticias):
@@ -65,56 +64,61 @@ def analizar_agenda(noticias):
     )
 
     prompt = f"""
-Sos director de inteligencia política de la consultora Polidoxa.
+Sos director de inteligencia política de Polidoxa.
 
-Tu trabajo es elaborar un informe profesional BASADO EXCLUSIVAMENTE en la evidencia disponible.
+REGLAS:
+- No inventes información.
+- Usá únicamente estas noticias.
+- Si un tema aparece una sola vez, marcá "señal débil".
+- No proyectes escenarios futuros.
+- Incluí links reales.
 
-REGLAS OBLIGATORIAS:
-- NO inventes información.
-- NO agregues datos externos.
-- NO infieras tendencias sin repetición en las noticias.
-- Solo podés usar lo que aparece en las noticias listadas.
-- Si un tema aparece una sola vez, indicarlo como "señal débil".
-- Si no hay suficiente evidencia, decir: "baja densidad informativa".
-- No proyectes escenarios futuros (ej: elecciones, crisis, derrotas).
-- No menciones actores que no estén explícitamente en las noticias.
-
-Noticias relevadas:
+Noticias:
 {texto_noticias}
 
-Generá un informe ejecutivo breve y riguroso.
+Devolvé SOLO JSON válido, sin texto adicional, con esta estructura exacta:
 
-Formato:
-
-📊 POLIDOXA | INTELLIGENCE BRIEF ARGENTINA
-📅 Fecha: {hoy}
-
-1. RESUMEN EJECUTIVO
-Solo hechos observables. Máximo 3 líneas.
-
-2. TEMA DOMINANTE
-- Tema
-- Descripción basada en hechos
-- Actores mencionados en las noticias
-- Nivel de riesgo (bajo/medio/alto) SOLO si hay evidencia
-
-3. EJES SECUNDARIOS
-Máximo 3:
-- tema
-- evidencia (qué noticia lo respalda)
-- riesgo (solo si aplica)
-
-4. ALERTAS
-Solo si hay evidencia clara:
-- ROJA (riesgo alto real)
-- AMARILLA (tensión)
-- VERDE (sin riesgo)
-
-5. RECOMENDACIÓN POLIDOXA
-Solo recomendaciones prudentes basadas en lo observado.
-
-6. FUENTES
-Listar links utilizados.
+{{
+  "fecha": "{hoy}",
+  "resumen_ejecutivo": "",
+  "tema_dominante": {{
+    "tema": "",
+    "descripcion": "",
+    "actores": [],
+    "riesgo": "bajo/medio/alto/crítico"
+  }},
+  "ejes_secundarios": [
+    {{"tema": "", "impacto": "", "riesgo": "bajo/medio/alto/crítico"}}
+  ],
+  "matriz_riesgo": {{
+    "riesgo_politico": 0,
+    "viralidad": 0,
+    "danio_reputacional": 0,
+    "oportunidad_comunicacional": 0
+  }},
+  "narrativas": {{
+    "oficialismo": "",
+    "oposicion": "",
+    "social_emergente": ""
+  }},
+  "actores_clave": {{
+    "ganan": [],
+    "pierden": [],
+    "expuestos": []
+  }},
+  "alertas": [
+    {{"nivel": "roja/amarilla/verde", "tema": "", "motivo": ""}}
+  ],
+  "oportunidades": {{
+    "oficialismo": "",
+    "oposicion_moderada": "",
+    "actores_territoriales": ""
+  }},
+  "recomendacion_polidoxa": "",
+  "fuentes": [
+    {{"titulo": "", "link": ""}}
+  ]
+}}
 """
 
     response = client.responses.create(
@@ -122,52 +126,9 @@ Listar links utilizados.
         input=prompt
     )
 
-    return json.loads(response.output_text)
-
-
-def armar_mensaje_whatsapp(data, pdf_url, dashboard_url):
-    ejes = "\n".join([
-        f"- {e['tema']} | Riesgo: {e['riesgo']}"
-        for e in data["ejes_secundarios"][:3]
-    ])
-
-    alertas = "\n".join([
-        f"- {a['nivel'].upper()}: {a['tema']}"
-        for a in data["alertas"][:3]
-    ])
-
-    fuentes = "\n".join([
-        f"- {f['titulo']}: {f['link']}"
-        for f in data["fuentes"][:3]
-    ])
-
-    return f"""
-📊 POLIDOXA | INTELLIGENCE BRIEF ARGENTINA
-📅 {data['fecha']}
-
-1. RESUMEN EJECUTIVO
-{data['resumen_ejecutivo']}
-
-2. TEMA DOMINANTE
-{data['tema_dominante']['tema']}
-Riesgo: {data['tema_dominante']['riesgo']}
-{data['tema_dominante']['descripcion']}
-
-3. EJES SECUNDARIOS
-{ejes}
-
-4. ALERTAS
-{alertas}
-
-5. RECOMENDACIÓN POLIDOXA
-{data['recomendacion_polidoxa']}
-
-🔗 PDF: {pdf_url}
-📊 Dashboard: {dashboard_url}
-
-FUENTES
-{fuentes}
-""".strip()
+    texto = response.output_text.strip()
+    texto = texto.replace("```json", "").replace("```", "").strip()
+    return json.loads(texto)
 
 
 def generar_pdf(data):
@@ -213,7 +174,6 @@ body {{ font-family: Arial; background:#f4f7f7; color:#163B3F; padding:30px; }}
 .card {{ background:white; padding:20px; border-radius:14px; margin-bottom:18px; box-shadow:0 2px 8px rgba(0,0,0,.08); }}
 h1 {{ color:#0E6F78; }}
 .metric {{ display:inline-block; width:22%; background:#e7f3f3; padding:15px; border-radius:12px; margin:5px; }}
-.red {{ color:#b00020; font-weight:bold; }}
 </style>
 </head>
 <body>
@@ -312,6 +272,51 @@ def subir_a_github(local_file, repo_path):
     r.raise_for_status()
 
 
+def armar_mensaje_whatsapp(data, pdf_url, dashboard_url):
+    ejes = "\n".join([
+        f"- {e['tema']} | Riesgo: {e['riesgo']}"
+        for e in data["ejes_secundarios"][:3]
+    ])
+
+    alertas = "\n".join([
+        f"- {a['nivel'].upper()}: {a['tema']}"
+        for a in data["alertas"][:3]
+    ])
+
+    fuentes = "\n".join([
+        f"- {f['titulo']}: {f['link']}"
+        for f in data["fuentes"][:3]
+    ])
+
+    return f"""
+📊 POLIDOXA | INTELLIGENCE BRIEF ARGENTINA
+📅 {data['fecha']}
+
+1. RESUMEN EJECUTIVO
+{data['resumen_ejecutivo']}
+
+2. TEMA DOMINANTE
+{data['tema_dominante']['tema']}
+Riesgo: {data['tema_dominante']['riesgo']}
+{data['tema_dominante']['descripcion']}
+
+3. EJES SECUNDARIOS
+{ejes}
+
+4. ALERTAS
+{alertas}
+
+5. RECOMENDACIÓN POLIDOXA
+{data['recomendacion_polidoxa']}
+
+🔗 PDF: {pdf_url}
+📊 Dashboard: {dashboard_url}
+
+FUENTES
+{fuentes}
+""".strip()
+
+
 def enviar_whatsapp(mensaje):
     twilio.messages.create(
         from_=TWILIO_FROM,
@@ -320,11 +325,11 @@ def enviar_whatsapp(mensaje):
     )
 
 
-def enviar_pdf_whatsapp(pdf_url, mensaje):
+def enviar_pdf_whatsapp(pdf_url):
     twilio.messages.create(
         from_=TWILIO_FROM,
         to=TWILIO_TO,
-        body=mensaje,
+        body="📄 POLIDOXA | Informe completo en PDF",
         media_url=[pdf_url]
     )
 
@@ -354,11 +359,7 @@ else:
     mensaje = armar_mensaje_whatsapp(data, pdf_url, dashboard_url)
 
     enviar_whatsapp(mensaje)
-
-    enviar_pdf_whatsapp(
-        pdf_url,
-        "📄 POLIDOXA | Informe completo en PDF"
-    )
+    enviar_pdf_whatsapp(pdf_url)
 
     if hay_alerta_roja(data):
         enviar_whatsapp("🚨 POLIDOXA ALERTA ROJA: se detectó un foco de crisis de alto riesgo.")
