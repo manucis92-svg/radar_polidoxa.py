@@ -364,7 +364,7 @@ print(mensaje)
 enviar_whatsapp(mensaje)
 enviar_pdf_whatsapp(pdf_url)
 
-    if hay_alerta_roja(data):
-        enviar_whatsapp("🚨 POLIDOXA ALERTA ROJA: se detectó un foco de crisis de alto riesgo.")
+if hay_alerta_roja(data):
+    enviar_whatsapp("🚨 POLIDOXA ALERTA ROJA: se detectó un foco de crisis de alto riesgo.")
 
     print(mensaje)
